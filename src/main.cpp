@@ -1,11 +1,30 @@
+/*
+Current game logic to impliment:
+- Fixed window size. Center it in the view.
+
+- Speed setting. All enemies move down at the same speed.
+- When you clear an enemy, the remaining enemies stop moving for some amount of time
+    relative to that enemies "difficulty".
+- Harder words have higher difficulty.
+- When the player gets a certain score, or maintains some kind of chars per min,
+    the speed increased by 1.
+*/
+
+
+
+
 #include <algorithm>
 #include <chrono>
+#include <cstdio>
+#include <fstream>
 #include <ncurses.h>
 #include <panel.h>
 #include <string>
+#include <sstream>
 #include <vector>
 
 #include "log.h"
+#include "words_easy.h"
 
 using namespace std;
 
@@ -26,29 +45,54 @@ WINDOW* WIN;
 vector<Enemy> ENEMIES;
 int DFPS = 60;
 
+double SPEED = 0.5f;
+double MOVET;
+int SPAWNFM = 3;
+int SPAWNF;
+
+int N_WORDS;
+
+//vector<string> WORDS;
+
 void addEnemy(int x, int y, float tmax, string s) {
+    string word = WORDS_EASY[rand() % 11];
+
+
     Enemy e;
-    e.x = 0;
+    e.x = rand() % (XMAX - word.length());
     e.y = 0;
-    e.t = 0;
-    e.tmax = 2.5f;
+    //e.t = 0;
+    //e.tmax = 2.5f;
     e.dtht = 1.f;
-    e.s = "banana";
+    e.s = word;
     e.idx = -1;
     e.alive = true;
     ENEMIES.push_back(e);
 }
 
 void update(double dt, char ch) {
+    bool move = false;
+    MOVET += dt;
+    if (MOVET >= SPEED) {
+        move = true;
+        MOVET = 0.0f;
+        
+        if (SPAWNF == 0) {
+            addEnemy(0, 0, 1.5f, "banana");
+            SPAWNF = SPAWNFM;
+        }
+        SPAWNF -= 1;
+    }
+
     for (Enemy& e: ENEMIES) {
         if (!e.alive) {
             e.dtht -= dt;
             continue;
         }
         
-        e.t += dt;
-        if (e.t >= e.tmax) {
-            e.t = 0;
+        //e.t += dt;
+        if (move) {
+            //e.t = 0;
             e.y += 1;
         }
         
@@ -88,10 +132,12 @@ void draw(string input, int lfps, int d_lfps) {
         
     for (Enemy e: ENEMIES) {
         if (e.alive) {
-            mvwaddnstr(WIN, e.y, e.x, e.s.c_str(), XMAX);
+            mvwaddnstr(WIN, e.y, e.x, e.s.c_str(), e.s.length());
             mvwchgat(WIN, e.y, e.x, e.x + 1 + e.idx, WA_STANDOUT, 0, NULL);
         }
         else {
+            string dead (e.s.length(), '-');
+            mvwaddnstr(WIN, e.y, e.x, dead.c_str(), XMAX);
         }
     }
         
@@ -115,8 +161,6 @@ int main (int argc, char* argv[]) {
     
     WIN = newwin(YMAX, XMAX, 0, 0);
     
-    addEnemy(0, 0, 1.5f, "banana");
-    
     float df_time = 1.f/DFPS;
     loga("frame time", to_string(df_time));
     
@@ -129,6 +173,9 @@ int main (int argc, char* argv[]) {
     int d_lfps = 0;
     
     bool running = true;
+
+    MOVET = 0.0f;
+    SPAWNF = SPAWNFM;
     
     while (running) {
         chrono::time_point old = now;
