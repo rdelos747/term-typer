@@ -50,13 +50,16 @@ double MOVET;
 int SPAWNFM = 3;
 int SPAWNF;
 
-int N_WORDS;
+int SCORE = 0;
+int TRACK_SCORE = 0;
+
+int TRACK_TM = 5; // Track time max
+int WPT = 0; // Words Per unit Time
 
 //vector<string> WORDS;
 
 void addEnemy(int x, int y, float tmax, string s) {
     string word = WORDS_EASY[rand() % 11];
-
 
     Enemy e;
     e.x = rand() % (XMAX - word.length());
@@ -102,6 +105,8 @@ void update(double dt, char ch) {
                 loga(">>CLEARED", e.s);
                 e.alive = false;
                 e.idx = -1;
+                SCORE++;
+                TRACK_SCORE++;
             }
         }
         else if (ch != -1) {
@@ -124,8 +129,9 @@ void update(double dt, char ch) {
 void draw(string input, int lfps, int d_lfps) {
     wclear(WIN);
     string dts = to_string(lfps) + " " + to_string(d_lfps);
-    string mid (XMAX - (input.length() + 1) - (dts.length() + 1), ' ');
-    string bot = " " + input + mid + dts;
+    string scr = " scr: " + to_string(SCORE) + " wpt: " + to_string(WPT);
+    string mid (XMAX - (input.length() + 1) - scr.length() - (dts.length() + 1), ' ');
+    string bot = " " + input + scr + mid + dts;
     wattron(WIN, WA_STANDOUT);
     mvwaddnstr(WIN, YMAX - 1, 0, bot.c_str(), XMAX);
     wattroff(WIN, WA_STANDOUT);
@@ -133,7 +139,7 @@ void draw(string input, int lfps, int d_lfps) {
     for (Enemy e: ENEMIES) {
         if (e.alive) {
             mvwaddnstr(WIN, e.y, e.x, e.s.c_str(), e.s.length());
-            mvwchgat(WIN, e.y, e.x, e.x + 1 + e.idx, WA_STANDOUT, 0, NULL);
+            mvwchgat(WIN, e.y, e.x, e.idx + 1, WA_STANDOUT, 0, NULL);
         }
         else {
             string dead (e.s.length(), '-');
@@ -172,6 +178,8 @@ int main (int argc, char* argv[]) {
     int lfps = 0;
     int d_lfps = 0;
     
+    int trackT = 0;
+    
     bool running = true;
 
     MOVET = 0.0f;
@@ -208,6 +216,14 @@ int main (int argc, char* argv[]) {
             d_lfps = d_frames;
             d_frames = 0;
             d_frameT = 0;
+            
+            trackT++;
+        }
+        
+        if (trackT == TRACK_TM) {
+            WPT = TRACK_SCORE;
+            TRACK_SCORE = 0;
+            trackT = 0;
         }
     }
     
